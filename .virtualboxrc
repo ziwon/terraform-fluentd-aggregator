@@ -1,0 +1,8 @@
+STACK_NAME=swarm
+
+# Settings for VM variables
+SWARM_MASTER=node-m1
+MANAGERS=2
+WORKERS=4
+VBOX_MEMORY=2048
+VBOX_CPUS=2

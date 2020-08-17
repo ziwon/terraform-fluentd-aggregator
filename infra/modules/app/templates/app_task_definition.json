@@ -1,0 +1,64 @@
+[
+  {
+    "name": "${container_name}",
+    "image": "${container_image}",
+    "essential": true,
+    "portMappings": [
+      {
+        "protocol": "tcp",
+        "containerPort": ${container_port},
+        "hostPort": ${container_port}
+      }
+    ],
+    "environment": [
+      {
+        "name": "APP",
+        "value": "${app}"
+      },
+      {
+        "name": "ENV",
+        "value": "${environment}"
+      },
+      {
+        "name": "WORKERS",
+        "value": "1"
+      },
+      {
+        "name": "LOG_LEVEL",
+        "value": "debug"
+      },
+      {
+        "name": "ES_HOST",
+        "value": "${es_host}"
+      },
+      {
+        "name": "ES_PORT",
+        "value": "${es_port}"
+      },
+      {
+        "name": "ES_USER",
+        "value": "${es_user}"
+      },
+      {
+        "name": "ES_PASSWORD",
+        "value": "${es_password}"
+      },
+      {
+        "name": "ES_SCHEME",
+        "value": "${es_scheme}"
+      },
+      {
+        "name": "ES_SSL_VERIFY",
+        "value": "${es_ssl_verify}"
+      }
+    ],
+    "logConfiguration": {
+      "logDriver": "awslogs",
+      "options": {
+        "awslogs-group": "/fargate/service/${app}",
+        "awslogs-region": "${region}",
+        "awslogs-stream-prefix": "ecs"
+      }
+    }
+  }
+]

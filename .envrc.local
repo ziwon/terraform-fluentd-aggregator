@@ -1,0 +1,15 @@
+export PROJECT_NAME=ziwon
+export APP_NAME=fluentd-aggregator
+
+export STACK_NAME=swarm
+export SWARM_MASTER=node-m1
+
+export ES_TAG=7.6.2
+export ES_JVM_HEAP=512m
+
+export ES_HOST=elasticsearch
+export ES_PORT=9200
+export ES_USER=elastic
+export ES_PASSWORD=changeme
+export ES_SCHEME=http
+export ES_SSL_VERIFY=false

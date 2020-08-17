@@ -1,0 +1,186 @@
+version: "3.8"
+
+x-json-logger:  &json-logger
+  logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
+
+services:
+  viz:
+    <<: *json-logger
+    image: dockersamples/visualizer
+    hostname: swarm-viz
+    networks:
+      - overnet
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - CTX_ROOT=/viz
+    deploy:
+      placement:
+        constraints:
+          - node.role == manager
+      labels:
+        - com.df.notify=true
+        - com.df.distribute=true
+        - com.df.servicePath=/viz
+        - com.df.port=8080
+
+  listener:
+    <<: *json-logger
+    image: dockerflow/docker-flow-swarm-listener:latest
+    hostname: swarm-listener
+    networks:
+      - overnet
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - DF_NOTIFY_CREATE_SERVICE_URL=http://proxy:8080/v1/docker-flow-proxy/reconfigure
+      - DF_NOTIFY_REMOVE_SERVICE_URL=http://proxy:8080/v1/docker-flow-proxy/remove
+    deploy:
+      placement:
+        constraints:
+          - node.role == manager
+
+  proxy:
+    <<: *json-logger
+    image: dockerflow/docker-flow-proxy:latest
+    hostname: proxy
+    ports:
+      - "80:80"             # kibana
+      - "443:443"           # kibana https, don't use currently
+      - "9200:9200"         # elasticsearch
+    networks:
+      - overnet
+    environment:
+      - LISTENER_ADDRESS=listener
+      - MODE=swarm
+      - BIND_PORTS=9200
+    deploy:
+      placement:
+        constraints:
+          - node.role == manager
+
+  elasticsearch:
+    <<: *json-logger
+    image: docker.elastic.co/elasticsearch/elasticsearch:${ES_TAG:-6.5.4}
+    hostname: "{{.Node.Hostname}}-elasticsearch"
+    environment:
+      - discovery.type=single-node
+      - "ES_JAVA_OPTS=-Xms${ES_JVM_HEAP} -Xmx${ES_JVM_HEAP}"
+      - network.host=0.0.0.0
+      - xpack.security.enabled=true
+      - xpack.ml.enabled=false
+      - xpack.monitoring.collection.enabled=false
+      - xpack.license.self_generated.type=trial
+      - ELASTIC_PASSWORD=${ES_PASSWORD}
+    networks:
+      - overnet
+    volumes:
+      - elasticsearch:/usr/share/elasticsearch/data
+      - /sys/fs/cgroup:/sys/fs/cgroup:ro
+    deploy:
+      endpoint_mode: dnsrr
+      placement:
+        constraints:
+          - node.role != manager
+        preferences:
+          - spread: node.id
+      replicas: 1
+      resources:
+        limits:
+          memory: 2g
+      labels:
+        - com.df.notify=true
+        - com.df.distribute=true
+        - com.df.servicePath=/
+        - com.df.port=9200
+        - com.df.srcPort=9200
+        - com.df.reqMode=http
+
+  kibana:
+    <<: *json-logger
+    image: docker.elastic.co/kibana/kibana:${ES_TAG:-6.5.4}
+    hostname: "{{.Node.Hostname}}-kibana"
+    environment:
+      - ELASTICSEARCH_HOST=elasticsearch:9200
+      - ELASTICSEARCH_USERNAME=elastic
+      - ELASTICSEARCH_PASSWORD=${ES_PASSWORD}
+      - SERVER_NAME="{{.Node.Hostname}}-kibana"
+    networks:
+      - overnet
+    volumes:
+      - kibana:/usr/share/kibana/data
+    deploy:
+      placement:
+        constraints:
+          - node.role == worker
+      labels:
+        - com.df.notify=true
+        - com.df.distribute=true
+        - com.df.servicePath=/
+        - com.df.port=5601
+        - com.df.srcPort=80
+        - com.df.reqMode=http
+
+  fluentd:
+    <<: *json-logger
+    # build `make docker-build`
+    image: fluentd-aggregator:latest
+    environment:
+      - WORKERS=1
+      - LOG_LEVEL=trace
+      - ES_HOST=${ES_HOST}
+      - ES_PORT=${ES_PORT}
+      - ES_USER=${ES_USER}
+      - ES_PASSWORD=${ES_PASSWORD}
+      - ES_SCHEME=${ES_SCHEME}
+      - ES_SSL_VERIFY=${ES_SSL_VERIFY}
+    volumes:
+      - fluentd-root:/etc/fluentd
+      - fluentd-buffer:/var/log/fluentd
+    networks:
+      - overnet
+    depends_on:
+      - kibana
+    deploy:
+      placement:
+        constraints:
+          - node.role == manager
+      labels:
+        - com.df.notify=true
+        - com.df.distribute=true
+        - com.df.servicePath=/
+        - com.df.port=24224
+        - com.df.srcPort=24224
+
+  fluentbit:
+    <<: *json-logger
+    image: ziwon/fluent-bit-docker-metadata:latest
+    volumes:
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    networks:
+      - overnet
+    deploy:
+      mode: global
+      resources:
+        reservations:
+          cpus: '0.5'
+          memory: 128M
+      restart_policy:
+        condition: on-failure
+      placement:
+        max_replicas_per_node: 1
+
+networks:
+  overnet:
+    external: true
+    name: overnet
+
+volumes:
+  elasticsearch:
+  kibana:
+  fluentd-root:
+  fluentd-buffer:

@@ -1,0 +1,17 @@
+export PROJECT_NAME=ziwon
+export APP_NAME=fluentd-aggregator
+
+export AWS_ACCOUNT_ID=57xxxxxxxxxx
+export AWS_REGION=ap-northeast-2
+export AWS_PROFILE=default
+export VPC_ID=vpc-xxxxxxxxx
+
+export ECR_IMAGE_URL=${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${APP_NAME}
+export TAG=latest
+
+export ES_HOST=elastic.ap-northeast-1.aws.found.io
+export ES_PORT=9243
+export ES_USER=elastic
+export ES_PASSWORD=changeme
+export ES_SCHEME=https
+export ES_SSL_VERIFY=true

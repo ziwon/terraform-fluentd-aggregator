@@ -1,0 +1,15 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+       ruby: 2.6
+  build:
+    commands:
+       - aws s3 cp s3://${bucket_name}/taskdef.json .
+       - aws s3 cp s3://${bucket_name}/appspec.yml .
+
+artifacts:
+  files:
+    - taskdef.json
+    - appspec.yml

@@ -1,0 +1,3 @@
+docker node update --label-add worker=01 node-w1
+docker node update --label-add worker=02 node-w2
+docker node update --label-add worker=03 node-w3
