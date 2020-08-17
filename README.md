@@ -61,7 +61,7 @@ To start services:
 $ make stack-start
 ```
 
-You can access kibana with `http://192.168.128.101` since the host IP is always keep the same values even if the docker machine is deployed multiple times.
+You can access kibana with `http://192.168.128.101` since the host IP keeps always the same value even if the docker machine is deployed multiple times.
 
 To change a certification with a customized domain:
 
