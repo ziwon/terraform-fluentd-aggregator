@@ -249,6 +249,39 @@ Usage: make [command] [args]
         Makefile:tf-vpc-id               Show the VPC ID with the given group          (e.g. make tf-vpc-id {group})
 ```
 
+## Notifications
+
+To enable the notification of AWS CodePipeline to the slack, you may need to change the following value to yours:
+
+```arn:aws:chatbot::57xxxxxxxxxx:chat-configuration/slack-channel/your-slack-noti```
+
+![](./aws-chatbot.png)
+
+[infra/modules/app/notification.tf](./infra/modules/app/notification.tf)
+
+```
+resource "aws_codestarnotifications_notification_rule" "deloy" {
+  detail_type = "FULL"
+  event_type_ids = [
+    "codepipeline-pipeline-action-execution-failed",
+    "codepipeline-pipeline-action-execution-succeeded",
+    "codepipeline-pipeline-pipeline-execution-failed",
+    "codepipeline-pipeline-manual-approval-failed",
+    "codepipeline-pipeline-manual-approval-succeeded"
+  ]
+
+  name     = "deploy-${var.app}"
+  resource = aws_codepipeline.main.arn
+
+  # The terraform not support AWS Chatbot (Beta)
+  target {
+    address = "arn:aws:chatbot::57xxxxxxxxxx:chat-configuration/slack-channel/your-slack-noti"
+    type    = "AWSChatbotSlack"
+  }
+
+  tags = var.tags
+}
+```
 
 ## Inputs
 (TBD)
