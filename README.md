@@ -4,39 +4,6 @@ This repo was created for the purpose of storing logs collected from multiple sw
 
 You may utilize my [fluent-bit-docker-metadata](https://github.com/ziwon/fluent-bit-docker-metadata) to ship logs to the aggregator from edge swarm cluster.
 
-## Usage
-
-Fluentd Aggregator runs as one ECS Fargate application, is deployed in a blue-green deployment, and routes the traffic load to the Network Load Balancer.
-
-```
-module "app" {
-  source = "./modules/app"
-
-  internal_load_balancer = false
-
-  vpc_id                = var.vpc_id
-  app                   = local.app_id
-  region                = var.region
-  environment           = var.environment
-  service_replicas      = var.service_replicas
-  task_definition       = var.task_definition
-  pipeline_image_tag    = var.pipeline_image_tag
-  primary_domain        = var.primary_domain
-  dns_name              = "${var.project}-${var.app}.${var.primary_domain}"
-  certificate_arn       = var.certificate_arn
-  kms_arn               = local.kms_arn
-  repository_name       = var.repository_name
-  enable_cpu_high_alarm = true
-  enable_cpu_low_alarm  = false
-
-  tags = merge(
-    map("Last Updated", "${module.global.build_time}"),
-    var.tags
-  )
-}
-
-```
-
 ## Fluentd Configuration
 
 As shown in the following configuration file, the collected logs are dynamically indexed to ElasticSearch according to the log properties using `record_transformer` filter and `elasticsearch dynamic` plugin. e.g.) `shinhan-aiagent`-2020.08.15
@@ -102,21 +69,6 @@ To change a certification with a customized domain:
 $ DOMAIN=awesome.domain make node-gen-cert
 ```
 
-## Requirements
-
-| Name | Version |
-|------|---------|
-| terraform | ~> 0.12.0 |
-| aws | ~> 2.57.0 |
-| null | ~> 2.0 |
-
-## Providers
-
-| Name | Version |
-|------|---------|
-| aws | ~> 2.57.0 |
-| null | ~> 2.0 |
-
 ## Environment Variables
 
 We create and manage per-project isolated development environments according to the **12factor** using **`direnv`**
@@ -133,7 +85,7 @@ Change to prod env:
 $ make envrc-prod
 ```
 
-You may need to set up the following values in production with AWS Cloud and Elastic Cloud:
+You may need to set up the following values in production with AWS Cloud and Elastic Cloud to deploy using Terraform:
 
 ```
 export PROJECT_NAME=ziwon
@@ -184,6 +136,119 @@ Usage: make [command] [args]
         swarm.mk:stack-stop              Remove the stack from swarm                   (e.g. make stack-stop)
         swarm.mk:stack-viz               Visualize the swarm stack                     (e.g. make stack-viz)
 ```
+
+## Terraform
+
+All the terraform files are in `infra` directory.
+
+### Requirements
+
+| Name | Version |
+|------|---------|
+| terraform | ~> 0.12.0 |
+| aws | ~> 2.57.0 |
+| null | ~> 2.0 |
+
+### Providers
+
+| Name | Version |
+|------|---------|
+| aws | ~> 2.57.0 |
+| null | ~> 2.0 |
+
+### Usage
+
+Fluentd Aggregator runs as one ECS Fargate application, is deployed in a Blue/Green deployment, and routes the traffic load to the Network Load Balancer.
+
+```
+module "app" {
+  source = "./modules/app"
+
+  internal_load_balancer = false
+
+  vpc_id                = var.vpc_id
+  app                   = local.app_id
+  region                = var.region
+  environment           = var.environment
+  service_replicas      = var.service_replicas
+  task_definition       = var.task_definition
+  pipeline_image_tag    = var.pipeline_image_tag
+  primary_domain        = var.primary_domain
+  dns_name              = "${var.project}-${var.app}.${var.primary_domain}"
+  certificate_arn       = var.certificate_arn
+  kms_arn               = local.kms_arn
+  repository_name       = var.repository_name
+  enable_cpu_high_alarm = true
+  enable_cpu_low_alarm  = false
+
+  tags = merge(
+    map("Last Updated", "${module.global.build_time}"),
+    var.tags
+  )
+}
+```
+
+### Using Makefile
+
+We assume that all the environment variables with your AWS Cloud are properly injected to `.envrc.prod`
+
+Set up your aws profile:
+
+```
+$ make tf-aws-profile
+AWS Access Key ID [****************J5JJ]:
+AWS Secret Access Key [****************VCWH]:
+Default region name [ap-northest-2]:
+Default output format [json]:
+```
+
+Intialize your terraform:
+
+```
+$ make tf-init
+```
+
+Generate tfvars according to `.envrc.prod`:
+
+```
+$ make tf-vars
+```
+
+Generates and show an execution plan:
+
+```
+$ make tf-plan
+```
+
+
+Builds or chagnes infrastructure:
+
+```
+$ make tf-apply
+```
+
+
+### Other Targets
+
+```
+$ make
+Usage: make [command] [args]
+        Makefile:help                    Show this help message                        (e.g. make help)
+        Makefile:tf-apply                Builds or changes infrastructure              (e.g. make tf-apply {project} {env})
+        Makefile:tf-aws-profile          Configure aws profile                         (e.g. make tf-aws-profile)
+        Makefile:tf-clean                Clean the Terraform-generated files           (e.g. make tf-clean)
+        Makefile:tf-destroy              Destroy Terraform-managed infrastructure      (e.g. make tf-destroy {project} {env})
+        Makefile:tf-get-tools            Install tools for development                 (e.g. make tf-get-tools)
+        Makefile:tf-import               Import existing infrastructure                (e.g. make tf-import {project} {env} {resource} {arn})
+        Makefile:tf-init                 Initialize s3 backend                         (e.g. make tf-init {project} {env})
+        Makefile:tf-lint                 Lint the Terraform files                      (e.g. make tf-lint {project} {env})
+        Makefile:tf-plan                 Generate and show an execution plan           (e.g. make tf-plan {project} {env})
+        Makefile:tf-pull                 Get remote state to local                     (e.g. make tf-pull)
+        Makefile:tf-refresh              Refresh the state file with infrastructure    (e.g. make tf-refresh {project} {env})
+        Makefile:tf-vars                 Create a tfvars file per environment          (e.g. VPC_ID=vpc-53a49e3b make tf-vars {project} {env})
+        Makefile:tf-vpc-id               Show the VPC ID with the given group          (e.g. make tf-vpc-id {group})
+```
+
 
 ## Inputs
 (TBD)
